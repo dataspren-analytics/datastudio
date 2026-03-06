@@ -1,33 +1,23 @@
 "use client";
 
 import {
-  createBrowserConfig,
-  generateId,
-  NotebookProvider,
+  createCodeCell,
+  PyodideExecutionBackend,
+  DataStudioProvider,
   DataStudioView,
-  type CodeCell as CodeCellType,
-} from "@/modules/data-studio";
+} from "@/data-studio";
 import { useMemo } from "react";
 
-function createEmptyCell(): CodeCellType {
-  return {
-    id: generateId(),
-    cell_type: "code",
-    source: "",
-    outputs: [],
-    execution_count: null,
-    metadata: {},
-  };
-}
 
 export default function Page() {
-  const config = useMemo(() => createBrowserConfig({ initialCells: [createEmptyCell()] }), []);
+  const config = useMemo(() => ({
+    execution: new PyodideExecutionBackend(),
+    initialCells: [createCodeCell()],
+  }), []);
 
   return (
-    <NotebookProvider config={config}>
-      <div className="[&_button]:cursor-pointer min-h-svh">
+    <DataStudioProvider config={config}>
         <DataStudioView />
-      </div>
-    </NotebookProvider>
+    </DataStudioProvider>
   );
 }

@@ -22,8 +22,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var d=JSON.parse(localStorage.getItem("data-studio-app")||"{}");if(!d.state||d.state.isDarkMode!==false)document.documentElement.classList.add("dark")}catch(e){document.documentElement.classList.add("dark")}})()`,
+          }}
+        />
+      </head>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background`}>
         <script
           dangerouslySetInnerHTML={{
             __html: `document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault()}})`,

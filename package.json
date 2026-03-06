@@ -41,7 +41,8 @@
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0",
     "tailwind-merge": "^3.4.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
