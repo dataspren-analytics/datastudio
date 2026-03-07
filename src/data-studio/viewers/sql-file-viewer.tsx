@@ -2,13 +2,17 @@
 
 import { AlertCircle, Loader2, Play } from "lucide-react";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
+import type { editor } from "monaco-editor";
+import type { Monaco } from "@monaco-editor/react";
 import type { TableData } from "../runtime";
 import { ResizablePanel } from "../components/resizable-panel";
 import { ResultTable } from "../notebook";
 import { MonacoCodeEditor, type MonacoEditorHandle } from "../components/monaco-code-editor";
-import { useAppStore, selectIsDarkMode } from "../store";
+import { useAppStore, selectIsDarkMode, selectSelectFile } from "../store";
 import { useFileLoader } from "./hooks/use-file-loader";
 import { useAutoSave } from "./hooks/use-auto-save";
+import { useCTECodeLens } from "./hooks/use-cte-codelens";
+import { useSQLDefinition } from "./hooks/use-sql-definition";
 import { getFileName } from "./hooks/file-path-utils";
 import type { FileViewerProps } from "./types";
 import { useDataFileDrop } from "../hooks/use-data-file-drop";
@@ -16,9 +20,9 @@ import { cn } from "@/lib/utils";
 
 type QueryState =
   | { status: "idle" }
-  | { status: "running" }
-  | { status: "success"; tableData: TableData; totalRows?: number }
-  | { status: "error"; message: string };
+  | { status: "running"; label?: string }
+  | { status: "success"; tableData: TableData; totalRows?: number; label?: string }
+  | { status: "error"; message: string; label?: string };
 
 interface SqlRuntimeActions {
   readFile: (name: string) => Promise<Uint8Array>;
@@ -34,11 +38,15 @@ interface SqlRuntimeActions {
 interface SqlFileViewerInnerProps {
   filePath: string;
   runtimeActions: SqlRuntimeActions;
+  dataFilePaths: string[];
+  onOpenFile: (path: string) => void;
 }
 
 const SqlFileViewerInner = memo(function SqlFileViewerInner({
   filePath,
   runtimeActions,
+  dataFilePaths,
+  onOpenFile,
 }: SqlFileViewerInnerProps) {
   const isDark = useAppStore(selectIsDarkMode);
   const [content, setContent] = useState("");
@@ -46,6 +54,8 @@ const SqlFileViewerInner = memo(function SqlFileViewerInner({
   const contentRef = useRef("");
   const [resultsHeight, setResultsHeight] = useState(450);
   const editorRef = useRef<MonacoEditorHandle>(null);
+  const [monacoEditor, setMonacoEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
+  const [monacoInstance, setMonacoInstance] = useState<Monaco | null>(null);
 
   const resolveColumns = useCallback(async (fp: string) => {
     const res = await runtimeActions.runSQL(`DESCRIBE SELECT * FROM '${fp}'`);
@@ -73,6 +83,48 @@ const SqlFileViewerInner = memo(function SqlFileViewerInner({
     },
     [save],
   );
+
+  const handleEditorMount = useCallback(
+    (ed: editor.IStandaloneCodeEditor, mon: Monaco) => {
+      setMonacoEditor(ed);
+      setMonacoInstance(mon);
+    },
+    [],
+  );
+
+  const handleRunCTE = useCallback(
+    async (cteName: string, sql: string) => {
+      setQueryState({ status: "running", label: cteName });
+      try {
+        const result = await runtimeActions.runSQL(sql);
+        if (result.error) {
+          setQueryState({ status: "error", message: result.error, label: cteName });
+          return;
+        }
+        setQueryState({
+          status: "success",
+          tableData: result.tableData ?? [],
+          totalRows: result.totalRows,
+          label: cteName,
+        });
+      } catch (e) {
+        setQueryState({
+          status: "error",
+          message: e instanceof Error ? e.message : "Failed to execute CTE query",
+          label: cteName,
+        });
+      }
+    },
+    [runtimeActions],
+  );
+
+  useCTECodeLens(monacoEditor, monacoInstance, handleRunCTE);
+
+  const definitionCallbacks = useMemo(
+    () => ({ openFile: onOpenFile, filePaths: dataFilePaths }),
+    [onOpenFile, dataFilePaths],
+  );
+  useSQLDefinition(monacoEditor, monacoInstance, definitionCallbacks);
 
   const handleRun = useCallback(async () => {
     if (!editorRef.current) return;
@@ -180,7 +232,9 @@ const SqlFileViewerInner = memo(function SqlFileViewerInner({
           isDark={isDark}
           enableScrolling
           showLineNumbers
+          glyphMargin
           resetKey={filePath}
+          onMount={handleEditorMount}
         />
       </div>
 
@@ -196,7 +250,9 @@ const SqlFileViewerInner = memo(function SqlFileViewerInner({
           contentClassName="bg-white dark:bg-card flex flex-col border-t border-neutral-200 dark:border-border"
         >
           <div className="px-3 py-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 border-b border-neutral-100 dark:border-border/50">
-            Results
+            {queryState.label
+              ? `Results for ${queryState.label}`
+              : "Results"}
           </div>
           <div className="flex-1 overflow-hidden flex flex-col">
             {queryState.status === "running" && (
@@ -244,6 +300,7 @@ const SqlFileViewerInner = memo(function SqlFileViewerInner({
 });
 
 export function SqlFileViewer({ filePath, runtime }: FileViewerProps) {
+  const selectFile = useAppStore(selectSelectFile);
   const runtimeActions = useMemo<SqlRuntimeActions>(
     () => ({
       readFile: runtime.readFile,
@@ -252,8 +309,17 @@ export function SqlFileViewer({ filePath, runtime }: FileViewerProps) {
     }),
     [runtime.readFile, runtime.writeFile, runtime.runSQL],
   );
+  const dataFilePaths = useMemo(
+    () => runtime.dataFiles.map((f) => f.path),
+    [runtime.dataFiles],
+  );
 
   return (
-    <SqlFileViewerInner filePath={filePath} runtimeActions={runtimeActions} />
+    <SqlFileViewerInner
+      filePath={filePath}
+      runtimeActions={runtimeActions}
+      dataFilePaths={dataFilePaths}
+      onOpenFile={selectFile}
+    />
   );
 }

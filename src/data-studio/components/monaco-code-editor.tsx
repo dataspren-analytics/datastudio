@@ -88,6 +88,7 @@ export interface MonacoCodeEditorProps {
   enableScrolling?: boolean;
   showLineNumbers?: boolean;
   highlightActiveLine?: boolean;
+  glyphMargin?: boolean;
   minHeight?: number;
   resetKey?: string;
   autoFocus?: boolean;
@@ -112,6 +113,7 @@ export const MonacoCodeEditor = forwardRef<MonacoEditorHandle, MonacoCodeEditorP
       enableScrolling = false,
       showLineNumbers = false,
       highlightActiveLine = true,
+      glyphMargin = false,
       minHeight = 80,
       resetKey,
       autoFocus = false,
@@ -229,6 +231,8 @@ export const MonacoCodeEditor = forwardRef<MonacoEditorHandle, MonacoCodeEditorP
       lineHeight: 21,
       fontFamily: "Menlo, ui-monospace, SFMono-Regular, Monaco, Consolas, monospace",
       lineNumbers: showLineNumbers ? ("on" as const) : ("off" as const),
+      lineNumbersMinChars: 3,
+      lineDecorationsWidth: 30,
       scrollBeyondLastLine: false,
       automaticLayout: true,
       tabSize: 2,
@@ -245,7 +249,9 @@ export const MonacoCodeEditor = forwardRef<MonacoEditorHandle, MonacoCodeEditorP
       hideCursorInOverviewRuler: true,
       overviewRulerBorder: false,
       renderLineHighlight: highlightActiveLine ? ("line" as const) : ("none" as const),
-      glyphMargin: false,
+      glyphMargin,
+      glyphMarginWidth: glyphMargin ? 24 : 0,
+      stickyScroll: { enabled: false },
       folding: false,
     };
 
