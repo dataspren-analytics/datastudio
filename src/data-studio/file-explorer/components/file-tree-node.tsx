@@ -127,6 +127,19 @@ export function FileTreeNodeComponent({
   const isExternalDropTarget = node.isDirectory && externalDropTargetDir === node.path;
   const showDragHighlight = isDropOnTarget || isExternalDropTarget;
 
+  const isDataFileNode = !node.isDirectory && getFileType(node.name).queryable;
+
+  const handleNativeDragStart = useCallback((e: React.DragEvent) => {
+    e.dataTransfer.setData("application/x-data-file-path", node.path);
+    e.dataTransfer.setData("text/plain", `SELECT * FROM '${node.path}'`);
+    e.dataTransfer.effectAllowed = "copy";
+  }, [node.path]);
+
+  const handlePointerDownCapture = useCallback((e: React.PointerEvent) => {
+    // Stop @dnd-kit PointerSensor from activating on data files
+    if (isDataFileNode) e.stopPropagation();
+  }, [isDataFileNode]);
+
   return (
     <div
       className={cn(
@@ -144,13 +157,15 @@ export function FileTreeNodeComponent({
           selectedPaths.has(node.path) && !isActiveFile && "bg-blue-50 dark:bg-blue-900/20",
           isThisDragging && "opacity-30",
           isBeingTransferred && "opacity-0 h-0 py-0 overflow-hidden",
-          canDrag && "touch-none"
+          canDrag && !isDataFileNode && "touch-none"
         )}
         style={{ paddingLeft: `${depth * 10 + 4}px` }}
         onContextMenu={handleContextMenu}
-        {...dragListeners}
+        {...(isDataFileNode ? {} : dragListeners)}
         {...dragAttributes}
         onClick={handleClick}
+        onPointerDownCapture={handlePointerDownCapture}
+        {...(isDataFileNode ? { draggable: true, onDragStart: handleNativeDragStart } : {})}
       >
         {node.isDirectory && (
           <ChevronRight

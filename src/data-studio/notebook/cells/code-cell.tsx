@@ -3,6 +3,9 @@
 import { MonacoCodeEditor, type MonacoEditorHandle } from "../../components/monaco-code-editor";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useStore, selectIsDarkMode } from "../store";
+import { useDataFileDrop } from "../../hooks/use-data-file-drop";
+import { useRuntime } from "../../provider/runtime-provider";
+import { cn } from "@/lib/utils";
 import {
   getCellType,
   getSourceString,
@@ -64,6 +67,14 @@ export function CodeCell({
   const cellType = getCellType(source);
   const isSQL = cellType === "sql";
   const cellSource = useMemo(() => getSourceString(source), [source]);
+
+  const runtime = useRuntime();
+  const resolveColumns = useCallback(async (fp: string) => {
+    const res = await runtime.runSQL(`DESCRIBE SELECT * FROM '${fp}'`);
+    return (res.tableData ?? []).map((r) => String(r.column_name));
+  }, [runtime]);
+
+  const { isDragOver, dropHandlers } = useDataFileDrop(editorRef, resolveColumns);
 
   // Focus management
   useEffect(() => {
@@ -160,9 +171,10 @@ export function CodeCell({
         />
 
         <div
-          className="p-3"
+          className={cn("p-3", isDragOver && isSQL && "ring-2 ring-inset ring-blue-400/40")}
           onClick={(e) => { e.stopPropagation(); onSelect(); }}
           onKeyDown={handleKeyDown}
+          {...(isSQL ? dropHandlers : {})}
         >
           <MonacoCodeEditor
             ref={editorRef}
@@ -171,6 +183,7 @@ export function CodeCell({
             language={isSQL ? "sql" : "python"}
             isDark={isDarkMode}
             minHeight={isSQL ? 42 : 80}
+            highlightActiveLine={false}
             autoFocus={isSelected}
             onMount={(editor) => {
               const styleId = "monaco-sql-magic-style";
