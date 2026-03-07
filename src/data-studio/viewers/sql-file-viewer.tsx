@@ -11,6 +11,8 @@ import { useFileLoader } from "./hooks/use-file-loader";
 import { useAutoSave } from "./hooks/use-auto-save";
 import { getFileName } from "./hooks/file-path-utils";
 import type { FileViewerProps } from "./types";
+import { useDataFileDrop } from "../hooks/use-data-file-drop";
+import { cn } from "@/lib/utils";
 
 type QueryState =
   | { status: "idle" }
@@ -44,6 +46,13 @@ const SqlFileViewerInner = memo(function SqlFileViewerInner({
   const contentRef = useRef("");
   const [resultsHeight, setResultsHeight] = useState(450);
   const editorRef = useRef<MonacoEditorHandle>(null);
+
+  const resolveColumns = useCallback(async (fp: string) => {
+    const res = await runtimeActions.runSQL(`DESCRIBE SELECT * FROM '${fp}'`);
+    return (res.tableData ?? []).map((r) => String(r.column_name));
+  }, [runtimeActions]);
+
+  const { isDragOver, dropHandlers } = useDataFileDrop(editorRef, resolveColumns);
 
   const loadFn = useCallback((data: Uint8Array) => {
     const text = new TextDecoder().decode(data);
@@ -158,7 +167,11 @@ const SqlFileViewerInner = memo(function SqlFileViewerInner({
       </div>
 
       {/* Editor */}
-      <div className="flex-1 overflow-hidden" onKeyDown={handleKeyDown}>
+      <div
+        className={cn("flex-1 overflow-hidden", isDragOver && "ring-2 ring-inset ring-blue-400/40")}
+        onKeyDown={handleKeyDown}
+        {...dropHandlers}
+      >
         <MonacoCodeEditor
           ref={editorRef}
           defaultValue={content}

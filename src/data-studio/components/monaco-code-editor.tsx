@@ -99,6 +99,7 @@ export interface MonacoEditorHandle {
   getSelection: () => string | null;
   focus: () => void;
   replaceContent: (text: string) => void;
+  insertAtCursor: (text: string, coords?: { x: number; y: number }) => void;
 }
 
 export const MonacoCodeEditor = forwardRef<MonacoEditorHandle, MonacoCodeEditorProps>(
@@ -110,7 +111,7 @@ export const MonacoCodeEditor = forwardRef<MonacoEditorHandle, MonacoCodeEditorP
       isDark = true,
       enableScrolling = false,
       showLineNumbers = false,
-      highlightActiveLine = false,
+      highlightActiveLine = true,
       minHeight = 80,
       resetKey,
       autoFocus = false,
@@ -139,6 +140,29 @@ export const MonacoCodeEditor = forwardRef<MonacoEditorHandle, MonacoCodeEditorP
       },
       focus: () => {
         editorRef.current?.focus();
+      },
+      insertAtCursor: (text: string, coords?: { x: number; y: number }) => {
+        const ed = editorRef.current;
+        if (!ed) return;
+        const model = ed.getModel();
+        if (!model) return;
+        const pos =
+          (coords && ed.getTargetAtClientPoint(coords.x, coords.y)?.position) ??
+          ed.getPosition() ??
+          { lineNumber: 1, column: 1 };
+        ed.pushUndoStop();
+        ed.executeEdits("insertAtCursor", [{
+          range: {
+            startLineNumber: pos.lineNumber,
+            startColumn: pos.column,
+            endLineNumber: pos.lineNumber,
+            endColumn: pos.column,
+          },
+          text,
+          forceMoveMarkers: true,
+        }]);
+        ed.pushUndoStop();
+        ed.focus();
       },
       replaceContent: (text: string) => {
         const ed = editorRef.current;

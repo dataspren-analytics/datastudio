@@ -43,6 +43,7 @@ export interface FileTypeDefinition {
   readonly canRenderWithoutRuntime: boolean;
   readonly exportFormats: ReadonlyArray<ExportFormatDefinition>;
   readonly defaultBaseName: string | null;
+  readonly queryable: boolean;
   createNewFileContent(fileName: string): Blob;
 }
 
@@ -57,6 +58,7 @@ interface FileTypeInit {
   canRenderWithoutRuntime?: boolean;
   exportFormats?: ReadonlyArray<ExportFormatDefinition>;
   defaultBaseName?: string | null;
+  queryable?: boolean;
 }
 
 class FileType implements FileTypeDefinition {
@@ -70,6 +72,7 @@ class FileType implements FileTypeDefinition {
   readonly canRenderWithoutRuntime: boolean;
   readonly exportFormats: ReadonlyArray<ExportFormatDefinition>;
   readonly defaultBaseName: string | null;
+  readonly queryable: boolean;
 
   constructor(init: FileTypeInit) {
     this.extension = init.extension;
@@ -82,6 +85,7 @@ class FileType implements FileTypeDefinition {
     this.canRenderWithoutRuntime = init.canRenderWithoutRuntime ?? false;
     this.exportFormats = init.exportFormats ?? [];
     this.defaultBaseName = init.defaultBaseName ?? null;
+    this.queryable = init.queryable ?? false;
   }
 
   createNewFileContent(_fileName: string): Blob {
@@ -130,6 +134,7 @@ export const FILE_TYPES: Record<string, FileTypeDefinition> = {
     iconColor: "var(--color-green-400)",
     viewer: CsvFileViewer,
     canRenderWithoutRuntime: true,
+    queryable: true,
     exportFormats: [
       { format: "json", label: "JSON", icon: Json },
       { format: "parquet", label: "Parquet", icon: DataTable },
@@ -142,6 +147,7 @@ export const FILE_TYPES: Record<string, FileTypeDefinition> = {
     icon: DeliveryParcel,
     iconColor: "var(--color-amber-700)",
     viewer: ParquetFileViewer,
+    queryable: true,
     exportFormats: [
       { format: "csv", label: "CSV", icon: Csv },
       { format: "json", label: "JSON", icon: Json },
@@ -154,6 +160,7 @@ export const FILE_TYPES: Record<string, FileTypeDefinition> = {
     icon: Xls,
     iconColor: "var(--color-emerald-500)",
     viewer: ExcelFileViewer,
+    queryable: true,
     exportFormats: [
       { format: "csv", label: "CSV", icon: Csv },
       { format: "json", label: "JSON", icon: Json },
@@ -166,6 +173,7 @@ export const FILE_TYPES: Record<string, FileTypeDefinition> = {
     icon: Xls,
     iconColor: "var(--color-emerald-500)",
     viewer: ExcelFileViewer,
+    queryable: true,
     exportFormats: [
       { format: "csv", label: "CSV", icon: Csv },
       { format: "json", label: "JSON", icon: Json },
@@ -179,6 +187,7 @@ export const FILE_TYPES: Record<string, FileTypeDefinition> = {
     iconColor: "var(--color-yellow-400)",
     viewer: JsonFileViewer,
     canRenderWithoutRuntime: true,
+    queryable: true,
   }),
   txt: new FileType({
     extension: "txt",
